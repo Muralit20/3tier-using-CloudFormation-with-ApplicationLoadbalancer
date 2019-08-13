@@ -1,0 +1,527 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "AWS cloud formation template to create the VPC,Subnet,Route Table,Instance Security group,ELB security Groups",
+  "Parameters": {
+    "AVzoneA": {
+      "Description": "select the AV zone to create the subnet1",
+      "Type": "AWS::EC2::AvailabilityZone::Name"
+    },
+    "AVzoneB": {
+      "Description": "select the AV zone to create the subnet2",
+      "Type": "AWS::EC2::AvailabilityZone::Name"
+    }, 
+	 "AVzoneC": {
+      "Description": "select the AV zone to create the subnet2",
+      "Type": "AWS::EC2::AvailabilityZone::Name"
+    },
+	"vpccidrvalue": {
+		"Type": "String"
+	},
+	"EC2subnetcidrvalue01": {
+		"Type": "String"
+	},
+	"EC2subnetcidrvalue02": {
+		"Type": "String"
+	},
+	"RDSsubnetcidrvalue01": {
+		"Type": "String"
+	},
+	"ALBsubnetcidrvalue1": {
+		"Type": "String"
+	},
+	"ALBsubnetcidrvalue2": {
+		"Type": "String"
+	},
+	"Natsubnetcidrvalue": {
+		"Type": "String"
+	},
+	"ELBIpAddressType": {
+        "Type": "String"
+    },
+	"CertificateArn1" : {
+		"Type" : "String",
+		"Default" : "arn:aws:acm:us-east-1:xxxxxxxxxxx"
+	}
+	},
+	"Resources": {
+    "VPC": {
+      "Type": "AWS::EC2::VPC",
+      "Properties": {
+        "CidrBlock": {"Ref" : "vpccidrvalue"},
+        "EnableDnsSupport": "true",
+        "EnableDnsHostnames": "true",
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "xxx-xxx-xxx"
+          }
+        ]
+      }
+    },
+    "InternetGateway": {
+      "Type": "AWS::EC2::InternetGateway",
+      "Properties": {
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "xxx"
+          }
+        ]
+      }
+    },
+    "GatewayToInternet": {
+      "Type": "AWS::EC2::VPCGatewayAttachment",
+      "Properties": {
+        "VpcId": {
+          "Ref": "VPC"
+        },
+        "InternetGatewayId": {
+          "Ref": "InternetGateway"
+        }
+      }
+    },
+	"NATGateway": {
+      "DependsOn": "GatewayToInternet",
+      "Type": "AWS::EC2::NatGateway",
+      "Properties": {
+        "AllocationId": {
+          "Fn::GetAtt": [
+            "ElasticIPOne",
+            "AllocationId"
+          ]
+        },
+        "SubnetId": {
+          "Ref": "Natsubnet"                                  
+        }
+      }
+    },
+    "ElasticIPOne": {
+      "Type": "AWS::EC2::EIP",
+      "Properties": {
+        "Domain": "vpccidrvalue"
+      }
+    },
+	"PublicRoute": {
+      "Type": "AWS::EC2::RouteTable",
+      "Properties": {
+        "VpcId": {
+          "Ref": "VPC"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "xxxxxxxxx-xxxxxxxxxx"
+          }
+        ]
+      }
+    },
+	"publicRouteattachment": {
+      "Type": "AWS::EC2::Route",
+      "DependsOn": "GatewayToInternet",
+      "Properties": {
+        "RouteTableId": {
+          "Ref": "PublicRoute"
+        },
+        "DestinationCidrBlock": "0.0.0.0/0",
+        "GatewayId": {
+          "Ref": "InternetGateway"
+        }
+      }
+    },
+	"PrivateRoute": {
+      "Type": "AWS::EC2::RouteTable",
+      "Properties": {
+        "VpcId": {
+          "Ref": "VPC"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "x-xxxx-xxxx"
+          }
+        ]
+      }
+    },
+	 "PrivateRouteToInternetOne": {
+      "Type": "AWS::EC2::Route",
+      "Properties": {
+        "RouteTableId": {
+          "Ref": "PrivateRoute"
+        },
+        "DestinationCidrBlock": "0.0.0.0/0",
+        "NatGatewayId": {
+          "Ref": "NATGateway"
+        }
+      }
+    },
+	"Natsubnet": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "VpcId": {
+          "Ref": "VPC"
+        },
+        "CidrBlock": {"Ref":"Natsubnetcidrvalue"},
+        "AvailabilityZone": {
+          "Ref": "AVzoneA"
+        },
+		"MapPublicIpOnLaunch": "true",
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "xxx-xx-xx-xxx"
+          }
+        ]
+      }
+    },
+	"AlbsubnetA": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "VpcId": {
+          "Ref": "VPC"
+        },
+        "CidrBlock": {"Ref":"AlsubnetcidrvalueA"},
+        "AvailabilityZone": {
+          "Ref": "AVzoneA"
+        },
+		"MapPublicIpOnLaunch": "true",
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "xxxxxxxxxxxxxxxxxxxxxxxxx"
+          }
+        ]
+      }
+    },
+	"AlbsubnetB": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "VpcId": {
+          "Ref": "VPC"
+        },
+        "CidrBlock": { "Ref":"ALBsubnetcidrvalue2"},
+        "AvailabilityZone": {
+          "Ref": "AVzoneB"
+        },
+	    "MapPublicIpOnLaunch": "true",
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "xxxxxxxxxxx-xxxxxxx"
+          }
+        ]
+      }
+    },
+	"EC2subnet01": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "VpcId": {
+          "Ref": "VPC"
+        },
+        "CidrBlock": {"Ref":"EC2subnetcidrvalue01"},
+        "AvailabilityZone": {
+          "Ref": "AVzoneA"
+        },
+		"MapPublicIpOnLaunch": "true",
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "xx-xxxxxx-xx"
+          }
+        ]
+      }
+    },
+	"EC2subnet02": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "VpcId": {
+          "Ref": "VPC"
+        },
+        "CidrBlock": {"Ref":"EC2subnetcidrvalue02"},
+        "AvailabilityZone": {
+          "Ref": "AVzoneA"
+        },
+		"MapPublicIpOnLaunch": "true",
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "xx-xxxxxx-xx"
+          }
+        ]
+      }
+    },
+	"RDSsubnet01": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "VpcId": {
+          "Ref": "VPC"
+        },
+        "CidrBlock": {"Ref":"RDSsubnetcidrvalue01"},
+        "AvailabilityZone": {
+          "Ref": "AVzoneA"
+        },
+		"MapPublicIpOnLaunch": "true",
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "xx-xxxxxx-xx"
+          }
+        ]
+      }
+    },
+	"PublicRouteTableAssociation1": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "SubnetId": {
+          "Ref": "AlbsubnetA"
+        },
+        "RouteTableId": {
+          "Ref": "PublicRoute"
+        }
+      }
+    },
+	"PublicRouteTableAssociation2": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "SubnetId": {
+          "Ref": "AlbsubnetB"
+        },
+        "RouteTableId": {
+          "Ref": "PublicRoute"
+        }
+      }
+    },
+	"PublicRouteTableAssociation3": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "SubnetId": {
+          "Ref": "Natsubnet"
+        },
+        "RouteTableId": {
+          "Ref": "PublicRoute"
+        }
+      }
+    },
+	"PublicRouteTableAssociation4": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "SubnetId": {
+          "Ref": "EC2subnet01"
+        },
+        "RouteTableId": {
+          "Ref": "PublicRoute"
+        }
+      }
+    },
+	"PublicRouteTableAssociation5": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "SubnetId": {
+          "Ref": "EC2subnet02"
+        },
+        "RouteTableId": {
+          "Ref": "PublicRoute"
+        }
+      }
+    },
+	"PrivateRouteTableAssociation1": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "SubnetId": {
+          "Ref": "RDSsubnet01"
+        },
+        "RouteTableId": {
+          "Ref": "PrivateRoute"
+        }
+      }
+    },
+
+	"Albsg": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "xxx-sg",
+        "VpcId": {
+          "Ref": "VPC"
+        },
+        "SecurityGroupIngress": [
+          {
+		    "IpProtocol" : "tcp",
+			"FromPort"   : "80",
+			"ToPort"     : "80",
+			"CidrIp"     : "0.0.0.0/0"	
+          },	
+		  
+		  {
+            "IpProtocol" : "tcp",
+            "FromPort"   : "443",
+            "ToPort"     : "443",
+            "CidrIp"	 : "0.0.0.0/0"
+		  }
+		  
+	    ],
+	
+	       "Tags": [
+          {
+            "Key": "Name",
+            "Value": "xxx-sg"
+          }
+        ]
+      }
+    },
+	"RDSsg": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "RDS-sg",
+        "VpcId": {
+          "Ref": "VPC"
+        },
+        "SecurityGroupIngress": [
+          {
+		    "IpProtocol" : "tcp",
+			"FromPort"   : "3306",
+			"ToPort"     : "3306",
+			"CidrIp"     : "0.0.0.0/0"	
+          }
+		  
+	    ],
+	
+	       "Tags": [
+          {
+            "Key": "Name",
+            "Value": "RDS-sg"
+          }
+        ]
+      }
+    },
+	"EC2sg": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "xxx-sg",
+        "VpcId": {
+          "Ref": "VPC"
+        },
+        "SecurityGroupIngress": [
+          {
+		    "IpProtocol" : "tcp",
+			"FromPort"   : "22",
+			"ToPort"     : "22",
+			"CidrIp"     : "0.0.0.0/0"	
+          } 
+	    ],
+	
+	       "Tags": [
+          {
+            "Key": "Name",
+            "Value": "xxx-sg"
+          }
+        ]
+      }
+    },
+	"EC2instance01" : {
+	  "Type" : "AWS::EC2::Instance",
+	  "Properties" : {
+	  "IamInstanceProfile" : "awscodedeploy_ec2",
+	  "SubnetId" : { "Ref" : "EC2subnet01" },
+	  "KeyName" : "Ec2key",
+	  "InstanceType" : "t2.small",
+	  "SecurityGroupIds" : [{ "Ref" : "EC2sg" }],
+	   "BlockDeviceMappings" : [
+                    {
+                        "DeviceName": "/dev/sda1",
+                        "Ebs": {
+                            "VolumeSize": "8"
+                        }
+                    }
+					
+                ],
+	   "ImageId" : "ami-idxxxxx",
+	    "Tags": [
+          {
+            "Key": "Name",
+            "Value": "ec2-1"
+          },
+		  {
+            "Key": "environment",
+            "Value": "prod"
+          }
+        ]
+	 }
+   },
+   "EC2instance02" : {
+	  "Type" : "AWS::EC2::Instance",
+	  "Properties" : {
+	  "IamInstanceProfile" : "awscodedeploy_ec2",
+	  "SubnetId" : { "Ref" : "EC2subnet02" },
+	  "KeyName" : "Ec2key",
+	  "InstanceType" : "t2.small",
+	  "SecurityGroupIds" : [{ "Ref" : "EC2sg" }],
+	   "BlockDeviceMappings" : [
+                    {
+                        "DeviceName": "/dev/sda1",
+                        "Ebs": {
+                            "VolumeSize": "8"
+                        }
+                    }
+					
+                ],
+	   "ImageId" : "ami-idxxxxx",
+	    "Tags": [
+          {
+            "Key": "Name",
+            "Value": "ec2-2"
+          },
+		  {
+            "Key": "environment",
+            "Value": "prod"
+          }
+        ]
+	 }
+   },
+   "AppLoadBalancer" : {
+	"Type" : "AWS::ElasticLoadBalancingV2::LoadBalancer",
+	"Properties" : {
+	"Name" : "ALB",
+	"Scheme" : "internet-facing",
+	"Subnets" : [{ "Ref" : "AlbsubnetA" }, {"Ref" : "AlbsubnetB"}],
+	"SecurityGroups" : [{"Ref": "Albsg"}],
+    "IpAddressType" : { "Ref" : "ELBIpAddressType" }
+	  }
+	},
+	"LoadBalancerListener": {
+    "Type": "AWS::ElasticLoadBalancingV2::Listener",
+    "Properties": {
+    "DefaultActions": [{
+      "Type": "forward",
+      "TargetGroupArn": { "Ref": "TargetGroup01"}}],
+    "LoadBalancerArn": { "Ref": "AppLoadBalancer" },
+    "Port": 80,
+    "Protocol": "HTTP",
+	"Certificates": [
+                    {
+                        "CertificateArn": {
+                            "Ref": "CertificateArn1"
+                        }
+                    }
+                ]
+	  }
+	},
+	"TargetGroup01" : {
+    "Type" : "AWS::ElasticLoadBalancingV2::TargetGroup",
+    "Properties" : {
+    "HealthCheckIntervalSeconds" : 30,
+    "UnhealthyThresholdCount" : 2,
+	"Matcher" : {
+      "HttpCode" : "200"
+    },
+    "HealthCheckPath" : "/",
+    "Name" : "TG01",
+    "Port" : 80,
+    "Protocol" : "HTTP",
+    "VpcId" : { "Ref": "VPC" },
+	"Targets": [
+      { "Id": {"Ref" : "EC2instance01"}, "Port": 80 },
+	  { "Id": {"Ref" : "EC2instance02"}, "Port": 80 }
+	]
+    }
+   }
+   }
+   }
